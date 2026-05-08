@@ -38,7 +38,7 @@
 ## 1. Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/tiktok-live-music-overlay.git
+git clone https://github.com/satellacodes/TikTok-LIVE-Music-Request-Overlay.git
 ```
 
 ---
@@ -196,6 +196,10 @@ cloudflared tunnel --url http://localhost:3000
 This project is for educational purposes.
 
 YouTube autoplay policies may differ depending on browser settings.
+
+this project im using brave browser for testing and streaming tiktok maybe 2 hours and no problem.
+
+tips if using brave browser or ads blocker switch to allow ads & tracker , cause this tools like tracker, calm nothing ads on this overlay music tools.
 
 ---
 
