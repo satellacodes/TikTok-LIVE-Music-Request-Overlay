@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>TikTok Music Overlay</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+        font-family: Arial;
+        background: transparent;
+        color: white;
+      }
+
+      #overlay {
+        position: fixed;
+
+        left: 30px;
+        bottom: 30px;
+
+        width: 500px;
+
+        display: none;
+
+        gap: 20px;
+
+        padding: 20px;
+
+        border-radius: 20px;
+
+        background: rgba(0, 0, 0, 0.85);
+
+        z-index: 9999;
+      }
+
+      #thumbnail {
+        width: 120px;
+        height: 120px;
+
+        border-radius: 15px;
+
+        object-fit: cover;
+      }
+
+      .info {
+        flex: 1;
+      }
+
+      .title {
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      .artist {
+        margin-top: 5px;
+        opacity: 0.8;
+      }
+
+      .requester {
+        margin-top: 10px;
+        font-size: 14px;
+        opacity: 0.7;
+      }
+
+      #avatar {
+        width: 45px;
+        height: 45px;
+
+        border-radius: 999px;
+
+        margin-top: 12px;
+      }
+
+      .progress-container {
+        width: 100%;
+        height: 8px;
+
+        margin-top: 15px;
+
+        background: rgba(255, 255, 255, 0.1);
+
+        border-radius: 999px;
+
+        overflow: hidden;
+      }
+
+      #progress {
+        width: 0%;
+        height: 100%;
+
+        background: white;
+      }
+
+      #queue {
+        position: fixed;
+
+        right: 30px;
+        bottom: 30px;
+
+        width: 320px;
+
+        padding: 20px;
+
+        border-radius: 20px;
+
+        background: rgba(0, 0, 0, 0.8);
+      }
+
+      .queueTitle {
+        font-size: 22px;
+        font-weight: bold;
+      }
+
+      .queueItem {
+        margin-top: 15px;
+      }
+
+      .queueSong {
+        font-weight: bold;
+      }
+
+      .queueUser {
+        font-size: 13px;
+        opacity: 0.7;
+      }
+
+      #unlock {
+        position: fixed;
+
+        inset: 0;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        background: black;
+
+        z-index: 999999;
+      }
+
+      #unlock button {
+        padding: 18px 30px;
+
+        font-size: 22px;
+
+        border: none;
+
+        border-radius: 15px;
+
+        cursor: pointer;
+      }
+
+      #ytplayer {
+        width: 1px;
+        height: 1px;
+
+        position: fixed;
+        left: -9999px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="unlock">
+      <button id="enableAudio">Enable Audio</button>
+    </div>
+
+    <div id="overlay">
+      <img id="thumbnail" />
+
+      <div class="info">
+        <div id="title" class="title">Waiting...</div>
+
+        <div id="artist" class="artist"></div>
+
+        <div id="requester" class="requester"></div>
+
+        <div class="progress-container">
+          <div id="progress"></div>
+        </div>
+
+        <img id="avatar" />
+      </div>
+    </div>
+
+    <div id="queue">
+      <div class="queueTitle">QUEUE</div>
+
+      <div id="queueList">No Queue</div>
+    </div>
+
+    <div id="ytplayer"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script src="app.js"></script>
+  </body>
+</html>
