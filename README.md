@@ -1,7 +1,7 @@
 # TikTok LIVE Music Request Overlay
 
 <p align="center">
-  <img src=""https://github.com/satellacodes/TikTok-LIVE-Music-Request-Overlay/blob/main/preview/tiktoklogo.png" width="180" />
+  <img src="https://github.com/satellacodes/TikTok-LIVE-Music-Request-Overlay/blob/main/preview/tiktoklogo.png" width="180" />
 </p>
 
 <p align="center">
