@@ -12,6 +12,9 @@ const queueList = document.getElementById("queueList");
 const unlock = document.getElementById("unlock");
 const enableAudio = document.getElementById("enableAudio");
 
+const MAX_VISIBLE_QUEUE = 5;
+const queueEls = new Map();
+
 // PLAYER
 let player;
 let playerReady = false;
@@ -48,6 +51,34 @@ function startProgress() {
 
     progress.style.width = `${percent}%`;
   }, 250);
+}
+
+// duration
+function formatDuration(seconds) {
+  if (!seconds || isNaN(seconds)) {
+    return "--:--";
+  }
+
+  const mins = Math.floor(seconds / 60);
+
+  const secs = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, "0");
+
+  return `${mins}:${secs}`;
+}
+
+function escapeHtml(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function queueKey(song) {
+  return song.queueId;
 }
 
 // YOUTUBE READY
@@ -90,6 +121,17 @@ window.onYouTubeIframeAPIReady = () => {
           overlay.style.display = "none";
 
           await fetch("/next");
+        }
+
+        // penyesuaian
+        if (event.data === 0) {
+          const overlayEl = document.getElementById("overlay");
+
+          overlayEl.style.opacity = "0";
+
+          setTimeout(() => {
+            overlayEl.style.display = "none";
+          }, 250);
         }
       },
 
@@ -134,12 +176,19 @@ socket.on("song-request", (song) => {
   // SHOW OVERLAY
   overlay.style.display = "flex";
 
+  // animation frame
+  requestAnimationFrame(() => {
+    overlay.style.opacity = "1";
+    overlay.style.transform = "translateY(0)";
+  });
+
   // SONG INFO
-  title.innerText = song.title;
-  artist.innerText = song.artist;
-  requester.innerText = `Requested by @${song.requester}`;
-  thumbnail.src = song.thumbnail;
-  avatar.src = song.avatar;
+  title.innerText = song.title || "Unknown";
+  artist.innerText = song.artist || "Unknown Artist";
+  requester.innerText = `Requested by @${song.requester || "anonymous"}`;
+
+  thumbnail.src = song.thumbnail || "";
+  avatar.src = song.avatar || "";
 
   resetProgress();
 
@@ -166,33 +215,152 @@ socket.on("song-request", (song) => {
   }
 });
 
-// QUEUE UPDATE
-socket.on("queue-update", (queue) => {
-  queueList.innerHTML = "";
+// render antrean
+function renderQueue(queue) {
+  const queueCount = document.getElementById("queueCount");
 
-  if (!queue.length) {
-    queueList.innerHTML = "No Queue";
+  const data = Array.isArray(queue) ? queue : [];
+
+  const visibleQueue = data.slice(0, MAX_VISIBLE_QUEUE);
+
+  if (queueCount) {
+    queueCount.textContent = `${data.length} Songs`;
+  }
+
+  const nextKeys = new Set(
+    visibleQueue.map((song, index) => queueKey(song, index)),
+  );
+
+  // REMOVE
+  for (const [key, el] of queueEls.entries()) {
+    if (!nextKeys.has(key)) {
+      el.classList.remove("show");
+
+      el.classList.add("leave");
+
+      setTimeout(() => {
+        if (el.parentElement) {
+          el.remove();
+        }
+
+        queueEls.delete(key);
+      }, 250);
+    }
+  }
+
+  // EMPTY
+  if (!visibleQueue.length) {
+    queueList.innerHTML = `
+      <div
+        style="
+          opacity:.5;
+          text-align:center;
+          padding:20px;
+          font-size:14px;
+        "
+      >
+        No Queue
+      </div>
+    `;
 
     return;
   }
 
-  queue.forEach((song) => {
-    const div = document.createElement("div");
+  // REMOVE NO QUEUE
+  if (queueList.innerText.includes("No Queue")) {
+    queueList.innerHTML = "";
+  }
 
-    div.className = "queueItem";
+  // ADD / UPDATE
+  visibleQueue.forEach((song, index) => {
+    const key = queueKey(song, index);
 
-    div.innerHTML = `
-      <div class="queueSong">
-        ${song.title}
+    let el = queueEls.get(key);
+
+    // duration
+    const duration =
+      song.durationText || song.duration || formatDuration(song.seconds);
+
+    const content = `
+      <div class="queueIndex"></div>
+
+      <img
+        class="queueThumb"
+        src="${escapeHtml(song.thumbnail || "")}"
+      />
+
+      <div class="queueInfo">
+
+        <div class="queueSong">
+          ${escapeHtml(song.title || "Unknown")}
+        </div>
+
+        <div class="queueArtist">
+          ${escapeHtml(song.artist || "Unknown Artist")}
+        </div>
+
+        <div class="queueUser">
+          Requested by @${escapeHtml(song.requester || "anonymous")}
+        </div>
+
       </div>
 
-      <div class="queueUser">
-        @${song.requester}
+      <div class="queueDuration">
+        ${escapeHtml(duration)}
       </div>
     `;
 
-    queueList.appendChild(div);
+    if (!el) {
+      el = document.createElement("div");
+
+      el.className = "queueItem";
+
+      el.dataset.key = key;
+
+      el.innerHTML = content;
+
+      queueEls.set(key, el);
+
+      queueList.appendChild(el);
+
+      requestAnimationFrame(() => {
+        el.classList.add("show");
+      });
+    } else {
+      el.innerHTML = content;
+    }
+
+    el.classList.remove("leave");
+
+    el.style.transitionDelay = `${index * 40}ms`;
+
+    const currentAtIndex = queueList.children[index];
+
+    if (currentAtIndex !== el) {
+      queueList.insertBefore(el, currentAtIndex || null);
+    }
   });
+
+  while (queueList.children.length > visibleQueue.length) {
+    const last = queueList.lastElementChild;
+
+    if (!last) break;
+
+    last.remove();
+  }
+  // FIX NUMBERING
+  [...queueList.querySelectorAll(".queueItem")].forEach((item, i) => {
+    const number = item.querySelector(".queueIndex");
+
+    if (number) {
+      number.textContent = i + 1;
+    }
+  });
+}
+
+// QUEUE UPDATE
+socket.on("queue-update", (queue) => {
+  renderQueue(queue);
 });
 
 // AUTO ENABLE

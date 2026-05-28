@@ -21,25 +21,38 @@
         color: white;
       }
 
-      #overlay {
+      #overlayStack {
         position: fixed;
-
-        left: 30px;
+        right: 30px;
         bottom: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 14px;
+        z-index: 9999;
+        pointer-events: none;
+      }
 
+      #overlay,
+      #queue {
+        pointer-events: auto;
+      }
+
+      #overlay {
         width: 500px;
-
         display: none;
-
         gap: 20px;
-
         padding: 20px;
-
         border-radius: 20px;
-
         background: rgba(0, 0, 0, 0.85);
 
-        z-index: 9999;
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease;
+
+        opacity: 0;
+
+        transform: translateY(10px);
       }
 
       #thumbnail {
@@ -74,63 +87,133 @@
       #avatar {
         width: 45px;
         height: 45px;
-
         border-radius: 999px;
-
         margin-top: 12px;
       }
 
       .progress-container {
         width: 100%;
         height: 8px;
-
         margin-top: 15px;
-
         background: rgba(255, 255, 255, 0.1);
-
         border-radius: 999px;
-
         overflow: hidden;
       }
 
       #progress {
         width: 0%;
         height: 100%;
-
         background: white;
       }
 
       #queue {
-        position: fixed;
-
-        right: 30px;
-        bottom: 30px;
-
-        width: 320px;
-
-        padding: 20px;
-
-        border-radius: 20px;
-
-        background: rgba(0, 0, 0, 0.8);
+        width: 360px;
+        padding: 18px;
+        border-radius: 24px;
+        background: linear-gradient(
+          180deg,
+          rgba(30, 30, 30, 0.95),
+          rgba(10, 10, 10, 0.92)
+        );
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow:
+          0 10px 40px rgba(0, 0, 0, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        overflow: hidden;
       }
-
+      .queueHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
       .queueTitle {
-        font-size: 22px;
-        font-weight: bold;
+        font-size: 14px;
+        letter-spacing: 2px;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .queueCount {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.45);
       }
 
+      #queueList {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
       .queueItem {
-        margin-top: 15px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        opacity: 0;
+        transform: translateY(-10px);
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease,
+          background 0.25s ease;
       }
 
-      .queueSong {
-        font-weight: bold;
+      .queueItem.show {
+        opacity: 1;
+        transform: translateY(0);
       }
-
-      .queueUser {
+      .queueItem.leave {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+      .queueItem:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .queueIndex {
+        width: 24px;
         font-size: 13px;
-        opacity: 0.7;
+        font-weight: bold;
+        color: rgba(255, 255, 255, 0.45);
+        flex: 0 0 auto;
+      }
+      .queueThumb {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: #222;
+        flex: 0 0 auto;
+      }
+      .queueInfo {
+        flex: 1;
+        min-width: 0;
+      }
+      .queueSong {
+        font-size: 15px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .queueArtist {
+        margin-top: 4px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.55);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .queueUser {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #1db954;
+      }
+      .queueDuration {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
+        flex: 0 0 auto;
       }
 
       #unlock {
@@ -176,28 +259,30 @@
       <button id="enableAudio">Enable Audio</button>
     </div>
 
-    <div id="overlay">
-      <img id="thumbnail" />
+    <div id="overlayStack">
+      <div id="overlay">
+        <img id="thumbnail" />
 
-      <div class="info">
-        <div id="title" class="title">Waiting...</div>
+        <div class="info">
+          <div id="title" class="title">Waiting...</div>
+          <div id="artist" class="artist"></div>
+          <div id="requester" class="requester"></div>
 
-        <div id="artist" class="artist"></div>
+          <div class="progress-container">
+            <div id="progress"></div>
+          </div>
 
-        <div id="requester" class="requester"></div>
-
-        <div class="progress-container">
-          <div id="progress"></div>
+          <img id="avatar" />
+        </div>
+      </div>
+      <div id="queue">
+        <div class="queueHeader">
+          <div class="queueTitle">UP NEXT</div>
+          <div id="queueCount" class="queueCount">0 Songs</div>
         </div>
 
-        <img id="avatar" />
+        <div id="queueList"></div>
       </div>
-    </div>
-
-    <div id="queue">
-      <div class="queueTitle">QUEUE</div>
-
-      <div id="queueList">No Queue</div>
     </div>
 
     <div id="ytplayer"></div>

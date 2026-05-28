@@ -19,9 +19,9 @@ const io = new Server(server, {
 // u must switch tiktok username or admins in here
 const PORT = 3000;
 
-const TIKTOK_USERNAME = "yourusername tiktok";
+const TIKTOK_USERNAME = "add your tiktok username";
 
-const ADMINS = ["admin_username_tiktok"];
+const ADMINS = ["add your admin"];
 
 const MAX_QUEUE = 50;
 
@@ -94,7 +94,7 @@ app.get("/next", (req, res) => {
 
 // TEST
 app.get("/test", async (req, res) => {
-  const song = await searchSong("multo");
+  const song = await searchSong("lalu biru");
 
   if (!song) {
     return res.send("NO SONG");
@@ -102,6 +102,7 @@ app.get("/test", async (req, res) => {
 
   const songData = {
     ...song,
+    queueId: Date.now().toString(36) + Math.random().toString(36).slice(2),
 
     requester: "debug",
 
@@ -112,8 +113,35 @@ app.get("/test", async (req, res) => {
 
   io.emit("queue-update", queue);
 
-  playNextSong();
+  if (!currentSong) {
+    playNextSong();
+  }
+  res.send("TEST OK");
+});
 
+app.get("/test2", async (req, res) => {
+  const song = await searchSong("the art of chasing you");
+
+  if (!song) {
+    return res.send("NO SONG");
+  }
+
+  const songData = {
+    ...song,
+    queueId: Date.now().toString(36) + Math.random().toString(36).slice(2),
+
+    requester: "debug2",
+
+    avatar: "https://github.com/satellacodes.png",
+  };
+
+  queue.push(songData);
+
+  io.emit("queue-update", queue);
+
+  if (!currentSong) {
+    playNextSong();
+  }
   res.send("TEST OK");
 });
 
@@ -141,7 +169,7 @@ async function start() {
 
         const username = data.uniqueId;
 
-        console.log("RAW CHAT:", message);
+        //  console.log("RAW CHAT:", message);
 
         if (!message) return;
 
@@ -192,6 +220,9 @@ async function start() {
 
         const songData = {
           ...song,
+
+          queueId:
+            Date.now().toString(36) + Math.random().toString(36).slice(2),
 
           requester: username,
 
