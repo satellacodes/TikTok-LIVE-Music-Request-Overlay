@@ -11,6 +11,8 @@ const progress = document.getElementById("progress");
 const queueList = document.getElementById("queueList");
 const unlock = document.getElementById("unlock");
 const enableAudio = document.getElementById("enableAudio");
+const overlayContent = document.getElementById("overlayContent");
+const overlayBg = document.getElementById("overlayBg");
 
 const MAX_VISIBLE_QUEUE = 5;
 const queueEls = new Map();
@@ -170,50 +172,102 @@ enableAudio.addEventListener("click", async () => {
 });
 
 // SONG REQUEST
-socket.on("song-request", (song) => {
+socket.on("song-request", async (song) => {
   console.log("▶️ PLAY:", song.title);
 
-  // SHOW OVERLAY
-  overlay.style.display = "flex";
+  overlay.style.display = "block";
 
-  // animation frame
-  requestAnimationFrame(() => {
-    overlay.style.opacity = "1";
-    overlay.style.transform = "translateY(0)";
-  });
+  overlayContent.classList.add("fadeOut");
 
-  // SONG INFO
-  title.innerText = song.title || "Unknown";
-  artist.innerText = song.artist || "Unknown Artist";
-  requester.innerText = `Requested by @${song.requester || "anonymous"}`;
+  setTimeout(() => {
+    title.innerText = song.title || "Unknown";
 
-  thumbnail.src = song.thumbnail || "";
-  avatar.src = song.avatar || "";
+    artist.innerText = song.artist || "Unknown Artist";
+
+    requester.innerText = `Requested by @${song.requester || "anonymous"}`;
+
+    thumbnail.src = song.thumbnail || "";
+
+    avatar.src = song.avatar || "";
+
+    updateOverlayBackground(song.thumbnail);
+
+    overlayContent.classList.remove("fadeOut");
+
+    overlayContent.classList.add("fadeIn");
+
+    setTimeout(() => {
+      overlayContent.classList.remove("fadeIn");
+    }, 350);
+  }, 250);
 
   resetProgress();
 
-  // AUDIO CHECK
   if (!audioUnlocked || !playerReady) {
-    console.log("Audio/player not ready");
-
     return;
   }
 
-  // PLAY VIDEO
   try {
     player.loadVideoById(song.videoId);
 
     setTimeout(() => {
       player.unMute();
-
       player.setVolume(100);
-
       player.playVideo();
     }, 500);
   } catch (err) {
-    console.log("PLAY ERROR:", err);
+    console.log(err);
   }
 });
+
+function updateOverlayBackground(imageUrl) {
+  const img = new Image();
+
+  img.crossOrigin = "anonymous";
+
+  img.src = imageUrl;
+
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = 50;
+    canvas.height = 50;
+
+    ctx.drawImage(img, 0, 0, 50, 50);
+
+    const pixels = ctx.getImageData(0, 0, 50, 50).data;
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    let count = 0;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      r += pixels[i];
+      g += pixels[i + 1];
+      b += pixels[i + 2];
+      count++;
+    }
+
+    r = Math.floor(r / count);
+    g = Math.floor(g / count);
+    b = Math.floor(b / count);
+
+    overlayBg.style.background = `
+      linear-gradient(
+        135deg,
+        rgba(${r}, ${g}, ${b}, 0.88),
+        rgba(${Math.floor(r * 0.35)},
+              ${Math.floor(g * 0.35)},
+              ${Math.floor(b * 0.35)},
+              0.94)
+      )
+    `;
+  };
+}
 
 // render antrean
 function renderQueue(queue) {

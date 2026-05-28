@@ -39,71 +39,167 @@
       }
 
       #overlay {
+        position: relative;
+
         width: 500px;
-        display: none;
-        gap: 20px;
-        padding: 20px;
-        border-radius: 20px;
-        background: rgba(0, 0, 0, 0.85);
+
+        overflow: hidden;
+
+        border-radius: 26px;
+
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+
+        border: 1px solid rgba(255, 255, 255, 0.08);
+
+        box-shadow:
+          0 10px 40px rgba(0, 0, 0, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+
+      #overlayBg {
+        position: absolute;
+        inset: 0;
+
+        background: linear-gradient(
+          135deg,
+          rgba(40, 40, 40, 0.92),
+          rgba(10, 10, 10, 0.92)
+        );
 
         transition:
-          opacity 0.25s ease,
-          transform 0.25s ease;
+          background 0.8s ease,
+          opacity 0.4s ease;
 
+        z-index: 0;
+      }
+
+      #overlayContent {
+        position: relative;
+
+        z-index: 1;
+
+        display: flex;
+        gap: 20px;
+
+        padding: 20px;
+
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease;
+      }
+
+      #overlayContent.fadeOut {
         opacity: 0;
 
-        transform: translateY(10px);
+        transform: translateY(8px);
+      }
+
+      #overlayContent.fadeIn {
+        opacity: 1;
+
+        transform: translateY(0);
       }
 
       #thumbnail {
         width: 120px;
         height: 120px;
 
-        border-radius: 15px;
+        border-radius: 18px;
 
         object-fit: cover;
+
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+
+        flex: 0 0 auto;
       }
 
       .info {
         flex: 1;
+
+        min-width: 0;
+      }
+
+      .nowPlaying {
+        font-size: 11px;
+
+        letter-spacing: 2px;
+
+        color: rgba(255, 255, 255, 0.5);
+
+        margin-bottom: 8px;
       }
 
       .title {
-        font-size: 24px;
-        font-weight: bold;
+        font-size: 28px;
+
+        font-weight: 800;
+
+        line-height: 1.15;
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .artist {
-        margin-top: 5px;
-        opacity: 0.8;
+        margin-top: 8px;
+
+        font-size: 16px;
+
+        color: rgba(255, 255, 255, 0.72);
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .requester {
-        margin-top: 10px;
-        font-size: 14px;
-        opacity: 0.7;
+        margin-top: 12px;
+
+        font-size: 13px;
+
+        color: #1db954;
       }
 
       #avatar {
-        width: 45px;
-        height: 45px;
+        width: 42px;
+        height: 42px;
+
         border-radius: 999px;
-        margin-top: 12px;
+
+        margin-top: 14px;
+
+        border: 2px solid rgba(255, 255, 255, 0.12);
       }
 
       .progress-container {
         width: 100%;
-        height: 8px;
-        margin-top: 15px;
-        background: rgba(255, 255, 255, 0.1);
+        height: 7px;
+
+        margin-top: 16px;
+
+        background: rgba(255, 255, 255, 0.08);
+
         border-radius: 999px;
+
         overflow: hidden;
       }
 
       #progress {
         width: 0%;
+
         height: 100%;
-        background: white;
+
+        border-radius: 999px;
+
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.95),
+          rgba(255, 255, 255, 0.65)
+        );
+
+        transition: width 0.15s linear;
       }
 
       #queue {
@@ -119,8 +215,8 @@
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.06);
         box-shadow:
-          0 10px 40px rgba(0, 0, 0, 0.45),
-          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          0 0 30px rgba(29, 185, 84, 0.12),
+          0 10px 40px rgba(0, 0, 0, 0.45);
         overflow: hidden;
       }
       .queueHeader {
@@ -261,18 +357,26 @@
 
     <div id="overlayStack">
       <div id="overlay">
-        <img id="thumbnail" />
+        <div id="overlayBg"></div>
 
-        <div class="info">
-          <div id="title" class="title">Waiting...</div>
-          <div id="artist" class="artist"></div>
-          <div id="requester" class="requester"></div>
+        <div id="overlayContent">
+          <img id="thumbnail" />
 
-          <div class="progress-container">
-            <div id="progress"></div>
+          <div class="info">
+            <div class="nowPlaying">NOW PLAYING</div>
+
+            <div id="title" class="title">Waiting...</div>
+
+            <div id="artist" class="artist"></div>
+
+            <div id="requester" class="requester"></div>
+
+            <div class="progress-container">
+              <div id="progress"></div>
+            </div>
+
+            <img id="avatar" />
           </div>
-
-          <img id="avatar" />
         </div>
       </div>
       <div id="queue">
