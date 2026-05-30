@@ -119,22 +119,21 @@ window.onYouTubeIframeAPIReady = () => {
         // ENDED
         if (event.data === 0) {
           resetProgress();
-
-          overlay.style.display = "none";
+          showIdleState();
 
           await fetch("/next");
         }
 
         // penyesuaian
-        if (event.data === 0) {
-          const overlayEl = document.getElementById("overlay");
-
-          overlayEl.style.opacity = "0";
-
-          setTimeout(() => {
-            overlayEl.style.display = "none";
-          }, 250);
-        }
+        // if (event.data === 0) {
+        //   const overlayEl = document.getElementById("overlay");
+        //
+        //   overlayEl.style.opacity = "0";
+        //
+        //   setTimeout(() => {
+        //     overlayEl.style.display = "none";
+        //   }, 250);
+        // }
       },
 
       // ERROR
@@ -143,7 +142,7 @@ window.onYouTubeIframeAPIReady = () => {
 
         resetProgress();
 
-        overlay.style.display = "none";
+        showIdleState();
 
         await fetch("/next");
       },
@@ -171,13 +170,44 @@ enableAudio.addEventListener("click", async () => {
   }
 });
 
+function showIdleState() {
+  title.innerText = "Tidak ada lagu rekkk";
+
+  artist.innerText = "Menunggu Member requests...";
+
+  requester.innerText = "Use !req song title";
+
+  thumbnail.src = "assets/music-idle.png";
+
+  avatar.src = "assets/avatar-idle.png";
+
+  progress.style.width = "0%";
+
+  overlayBg.style.background = `
+    linear-gradient(
+      135deg,
+      rgba(40,40,40,.92),
+      rgba(10,10,10,.94)
+    )
+  `;
+}
+
 // SONG REQUEST
+let overlayTransitioning = false;
+
 socket.on("song-request", async (song) => {
-  console.log("▶️ PLAY:", song.title);
-
   overlay.style.display = "block";
+  overlay.style.opacity = "1";
 
-  overlayContent.classList.add("fadeOut");
+  if (overlayTransitioning) {
+    return;
+  }
+
+  overlayTransitioning = true;
+
+  overlayContent.classList.remove("visible");
+
+  overlayContent.classList.add("hidden");
 
   setTimeout(() => {
     title.innerText = song.title || "Unknown";
@@ -192,14 +222,12 @@ socket.on("song-request", async (song) => {
 
     updateOverlayBackground(song.thumbnail);
 
-    overlayContent.classList.remove("fadeOut");
+    overlayContent.classList.remove("hidden");
 
-    overlayContent.classList.add("fadeIn");
+    overlayContent.classList.add("visible");
 
-    setTimeout(() => {
-      overlayContent.classList.remove("fadeIn");
-    }, 350);
-  }, 250);
+    overlayTransitioning = false;
+  }, 220);
 
   resetProgress();
 
@@ -417,6 +445,10 @@ socket.on("queue-update", (queue) => {
   renderQueue(queue);
 });
 
+socket.on("song-ended", () => {
+  showIdleState();
+});
+
 // AUTO ENABLE
 setTimeout(() => {
   if (!audioUnlocked && enableAudio) {
@@ -432,3 +464,5 @@ socket.on("connect", () => {
 socket.on("disconnect", () => {
   console.log("❌ SOCKET DISCONNECTED");
 });
+
+showIdleState();

@@ -16,20 +16,25 @@
 
       body {
         overflow: hidden;
-        font-family: Arial;
+        font-family: Arial, sans-serif;
         background: transparent;
         color: white;
       }
 
       #overlayStack {
         position: fixed;
+
         right: 30px;
         bottom: 30px;
+
         display: flex;
         flex-direction: column;
         align-items: flex-end;
+
         gap: 14px;
+
         z-index: 9999;
+
         pointer-events: none;
       }
 
@@ -47,14 +52,18 @@
 
         border-radius: 26px;
 
-        backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
+        opacity: 1;
+
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
 
         border: 1px solid rgba(255, 255, 255, 0.08);
 
         box-shadow:
           0 10px 40px rgba(0, 0, 0, 0.45),
           inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+        transition: opacity 0.3s ease;
       }
 
       #overlayBg {
@@ -64,14 +73,14 @@
         background: linear-gradient(
           135deg,
           rgba(40, 40, 40, 0.92),
-          rgba(10, 10, 10, 0.92)
+          rgba(10, 10, 10, 0.94)
         );
+
+        z-index: 0;
 
         transition:
           background 0.8s ease,
           opacity 0.4s ease;
-
-        z-index: 0;
       }
 
       #overlayContent {
@@ -80,22 +89,26 @@
         z-index: 1;
 
         display: flex;
+
         gap: 20px;
 
         padding: 20px;
 
-        transition:
-          opacity 0.35s ease,
-          transform 0.35s ease;
-      }
+        opacity: 1;
 
-      #overlayContent.fadeOut {
+        transform: translateY(0);
+
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease;
+      }
+      #overlayContent.hidden {
         opacity: 0;
 
         transform: translateY(8px);
       }
 
-      #overlayContent.fadeIn {
+      #overlayContent.visible {
         opacity: 1;
 
         transform: translateY(0);
@@ -109,9 +122,9 @@
 
         object-fit: cover;
 
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
-
         flex: 0 0 auto;
+
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
       }
 
       .info {
@@ -171,19 +184,22 @@
         margin-top: 14px;
 
         border: 2px solid rgba(255, 255, 255, 0.12);
+
+        object-fit: cover;
       }
 
       .progress-container {
         width: 100%;
+
         height: 7px;
 
         margin-top: 16px;
 
-        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
 
         border-radius: 999px;
 
-        overflow: hidden;
+        background: rgba(255, 255, 255, 0.08);
       }
 
       #progress {
@@ -204,52 +220,78 @@
 
       #queue {
         width: 360px;
+
         padding: 18px;
+
+        overflow: hidden;
+
         border-radius: 24px;
+
         background: linear-gradient(
           180deg,
           rgba(30, 30, 30, 0.95),
           rgba(10, 10, 10, 0.92)
         );
+
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
+
         border: 1px solid rgba(255, 255, 255, 0.06);
+
         box-shadow:
           0 0 30px rgba(29, 185, 84, 0.12),
           0 10px 40px rgba(0, 0, 0, 0.45);
-        overflow: hidden;
       }
+
       .queueHeader {
         display: flex;
+
         align-items: center;
         justify-content: space-between;
+
         margin-bottom: 16px;
       }
+
       .queueTitle {
         font-size: 14px;
-        letter-spacing: 2px;
+
         font-weight: 700;
+
+        letter-spacing: 2px;
+
         color: rgba(255, 255, 255, 0.7);
       }
+
       .queueCount {
         font-size: 12px;
+
         color: rgba(255, 255, 255, 0.45);
       }
 
       #queueList {
         display: flex;
         flex-direction: column;
+
         gap: 10px;
       }
+
       .queueItem {
         display: flex;
+
         align-items: center;
+
         gap: 12px;
+
         padding: 12px;
+
         border-radius: 16px;
+
         background: rgba(255, 255, 255, 0.04);
+
         opacity: 0;
+
         transform: translateY(-10px);
+
         transition:
           opacity 0.25s ease,
           transform 0.25s ease,
@@ -258,58 +300,86 @@
 
       .queueItem.show {
         opacity: 1;
+
         transform: translateY(0);
       }
+
       .queueItem.leave {
         opacity: 0;
+
         transform: translateY(10px) scale(0.98);
       }
+
       .queueItem:hover {
         background: rgba(255, 255, 255, 0.08);
       }
+
       .queueIndex {
         width: 24px;
+
+        flex: 0 0 auto;
+
         font-size: 13px;
         font-weight: bold;
+
         color: rgba(255, 255, 255, 0.45);
-        flex: 0 0 auto;
       }
+
       .queueThumb {
         width: 52px;
         height: 52px;
+
         border-radius: 12px;
+
         object-fit: cover;
+
         background: #222;
+
         flex: 0 0 auto;
       }
+
       .queueInfo {
         flex: 1;
+
         min-width: 0;
       }
+
       .queueSong {
         font-size: 15px;
+
         font-weight: 700;
+
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
       .queueArtist {
         margin-top: 4px;
+
         font-size: 13px;
+
         color: rgba(255, 255, 255, 0.55);
+
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
       .queueUser {
         margin-top: 6px;
+
         font-size: 12px;
+
         color: #1db954;
       }
+
       .queueDuration {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.4);
         flex: 0 0 auto;
+
+        font-size: 12px;
+
+        color: rgba(255, 255, 255, 0.4);
       }
 
       #unlock {
@@ -320,7 +390,6 @@
         display: flex;
 
         align-items: center;
-
         justify-content: center;
 
         background: black;
@@ -345,6 +414,7 @@
         height: 1px;
 
         position: fixed;
+
         left: -9999px;
       }
     </style>
@@ -359,8 +429,8 @@
       <div id="overlay">
         <div id="overlayBg"></div>
 
-        <div id="overlayContent">
-          <img id="thumbnail" />
+        <div id="overlayContent" class="visible">
+          <img id="thumbnail" src="assets/music-idle.png" />
 
           <div class="info">
             <div class="nowPlaying">NOW PLAYING</div>
@@ -375,13 +445,15 @@
               <div id="progress"></div>
             </div>
 
-            <img id="avatar" />
+            <img id="avatar" src="assets/avatar-idle.png" />
           </div>
         </div>
       </div>
+
       <div id="queue">
         <div class="queueHeader">
           <div class="queueTitle">UP NEXT</div>
+
           <div id="queueCount" class="queueCount">0 Songs</div>
         </div>
 
