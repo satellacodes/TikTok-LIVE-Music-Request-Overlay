@@ -19,9 +19,9 @@ const io = new Server(server, {
 // u must switch tiktok username or admins in here
 const PORT = 3000;
 
-const TIKTOK_USERNAME = "add your tiktok username";
+const TIKTOK_USERNAME = "change this";
 
-const ADMINS = ["add your admin"];
+const ADMINS = ["change this"];
 
 const MAX_QUEUE = 50;
 
@@ -60,6 +60,8 @@ async function searchSong(query) {
       thumbnail: video.thumbnail,
 
       videoId: video.videoId,
+      durationText: video.timestamp,
+      seconds: video.seconds,
     };
   } catch (err) {
     console.log(err);
@@ -86,6 +88,10 @@ function playNextSong() {
 // NEXT
 app.get("/next", (req, res) => {
   currentSong = null;
+
+  if (queue.length === 0) {
+    emitIdleState();
+  }
 
   playNextSong();
 
@@ -153,8 +159,14 @@ io.on("connection", (socket) => {
 
   if (currentSong) {
     socket.emit("song-request", currentSong);
+  } else {
+    socket.emit("song-ended");
   }
 });
+
+function emitIdleState() {
+  io.emit("song-ended");
+}
 
 // START TIKTOK
 async function start() {
