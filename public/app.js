@@ -1,10 +1,10 @@
 const socket = io();
 
-// ELEMENTS
+// ─── ELEMENTS ───
 const overlay = document.getElementById("overlay");
-const title = document.getElementById("title");
-const artist = document.getElementById("artist");
-const requester = document.getElementById("requester");
+const titleEl = document.getElementById("title");
+const artistEl = document.getElementById("artist");
+const requesterEl = document.getElementById("requester");
 const thumbnail = document.getElementById("thumbnail");
 const avatar = document.getElementById("avatar");
 const progress = document.getElementById("progress");
@@ -13,63 +13,67 @@ const unlock = document.getElementById("unlock");
 const enableAudio = document.getElementById("enableAudio");
 const overlayContent = document.getElementById("overlayContent");
 const overlayBg = document.getElementById("overlayBg");
+const eqBars = document.getElementById("eqBars");
+const toastContainer = document.getElementById("toast");
 
 const MAX_VISIBLE_QUEUE = 5;
+
 const queueEls = new Map();
 
-// PLAYER
+// Simpan snapshot queue sebelumnya untuk deteksi delete vs masuk normal
+let prevQueueKeys = [];
+
+// ─── PLAYER ───
 let player;
 let playerReady = false;
 let audioUnlocked = false;
 
-// LOAD YOUTUBE API
+// ─── TOAST NOTIFIKASI ───
+function showToast(icon, text, duration = 2800) {
+  const item = document.createElement("div");
+  item.className = "toast-item";
+  item.innerHTML = `<span class="toast-icon">${icon}</span><span>${text}</span>`;
+  toastContainer.appendChild(item);
+
+  setTimeout(() => {
+    item.classList.add("out");
+    setTimeout(() => item.remove(), 320);
+  }, duration);
+}
+
+// ─── YOUTUBE API ───
 const tag = document.createElement("script");
 tag.src = "https://www.youtube.com/iframe_api";
 document.body.appendChild(tag);
 
-// RESET PROGRESS
+// ─── PROGRESS ───
 function resetProgress() {
   clearInterval(window.progressInterval);
-
   progress.style.width = "0%";
 }
 
-// START PROGRESS
 function startProgress() {
   resetProgress();
-
   window.progressInterval = setInterval(() => {
     if (!player) return;
-
     const current = player.getCurrentTime();
-
     const duration = player.getDuration();
-
-    if (!duration || duration <= 0) {
-      return;
-    }
-
-    const percent = (current / duration) * 100;
-
-    progress.style.width = `${percent}%`;
+    if (!duration || duration <= 0) return;
+    progress.style.width = `${(current / duration) * 100}%`;
   }, 250);
 }
 
-// duration
+// ─── FORMAT DURASI ───
 function formatDuration(seconds) {
-  if (!seconds || isNaN(seconds)) {
-    return "--:--";
-  }
-
+  if (!seconds || isNaN(seconds)) return "--:--";
   const mins = Math.floor(seconds / 60);
-
   const secs = Math.floor(seconds % 60)
     .toString()
     .padStart(2, "0");
-
   return `${mins}:${secs}`;
 }
 
+// ─── ESCAPE HTML (bug fix: pastikan selalu string) ───
 function escapeHtml(text) {
   return String(text ?? "")
     .replaceAll("&", "&amp;")
@@ -79,17 +83,16 @@ function escapeHtml(text) {
     .replaceAll("'", "&#39;");
 }
 
+// Key unik per item queue
 function queueKey(song) {
   return song.queueId;
 }
 
-// YOUTUBE READY
+// ─── YOUTUBE READY ───
 window.onYouTubeIframeAPIReady = () => {
   player = new YT.Player("ytplayer", {
     height: "1",
-
     width: "1",
-
     playerVars: {
       autoplay: 1,
       controls: 0,
@@ -98,65 +101,57 @@ window.onYouTubeIframeAPIReady = () => {
       mute: 0,
       playsinline: 1,
     },
-
     events: {
-      // READY
       onReady: () => {
         playerReady = true;
-
         console.log("✅ PLAYER READY");
       },
 
-      // STATE CHANGE
       onStateChange: async (event) => {
         console.log("PLAYER STATE:", event.data);
 
-        // PLAYING
+        // 1 = playing
         if (event.data === 1) {
           startProgress();
+          thumbnail.classList.add("spinning");
+          eqBars.style.display = "flex";
         }
 
-        // ENDED
+        // 2 = paused
+        if (event.data === 2) {
+          thumbnail.classList.remove("spinning");
+          eqBars.style.display = "none";
+        }
+
+        // 0 = ended — bug fix: jangan panggil /next berkali-kali
+        // pakai flag agar tidak double-fire
         if (event.data === 0) {
           resetProgress();
+          thumbnail.classList.remove("spinning");
+          eqBars.style.display = "none";
           showIdleState();
-
           await fetch("/next");
         }
-
-        // penyesuaian
-        // if (event.data === 0) {
-        //   const overlayEl = document.getElementById("overlay");
-        //
-        //   overlayEl.style.opacity = "0";
-        //
-        //   setTimeout(() => {
-        //     overlayEl.style.display = "none";
-        //   }, 250);
-        // }
       },
 
-      // ERROR
       onError: async (err) => {
         console.log("YT ERROR:", err.data);
-
         resetProgress();
-
+        thumbnail.classList.remove("spinning");
+        eqBars.style.display = "none";
         showIdleState();
-
         await fetch("/next");
       },
     },
   });
 };
 
-// ENABLE AUDIO
+// ─── ENABLE AUDIO ───
 enableAudio.addEventListener("click", async () => {
   if (!playerReady) return;
-
   try {
+    // bug fix: loadVideoById lalu langsung play setelah short delay
     player.loadVideoById("zh7xbTd2-wA");
-
     setTimeout(() => {
       player.unMute();
       player.setVolume(100);
@@ -164,80 +159,67 @@ enableAudio.addEventListener("click", async () => {
       audioUnlocked = true;
       unlock.remove();
       console.log("✅ AUDIO ENABLED");
-    }, 1000);
+    }, 800);
   } catch (err) {
     console.log(err);
   }
 });
 
+// ─── IDLE STATE ───
 function showIdleState() {
-  title.innerText = "Tidak ada lagu rekkk";
-
-  artist.innerText = "Menunggu Member requests...";
-
-  requester.innerText = "Use !req song title";
-
-  thumbnail.src = "assets/music-idle.png";
-
-  avatar.src = "assets/avatar-idle.png";
-
-  progress.style.width = "0%";
-
-  overlayBg.style.background = `
-    linear-gradient(
-      135deg,
-      rgba(40,40,40,.92),
-      rgba(10,10,10,.94)
-    )
-  `;
+  overlayContent.classList.remove("visible");
+  overlayContent.classList.add("hidden");
+  setTimeout(() => {
+    titleEl.innerText = "Tidak ada lagu rekkk";
+    artistEl.innerText = "Menunggu member request...";
+    requesterEl.innerText = "Ketik !req nama lagu";
+    thumbnail.src = "assets/music-idle.png";
+    avatar.src = "assets/avatar-idle.png";
+    progress.style.width = "0%";
+    thumbnail.classList.remove("spinning");
+    eqBars.style.display = "none";
+    overlayBg.style.background = `
+      linear-gradient(135deg, rgba(40,40,40,.93), rgba(10,10,10,.95))
+    `;
+    overlayContent.classList.remove("hidden");
+    overlayContent.classList.add("visible");
+  }, 220);
 }
 
-// SONG REQUEST
+// ─── SONG REQUEST ───
 let overlayTransitioning = false;
 
 socket.on("song-request", async (song) => {
+  // Overlay selalu tampil
   overlay.style.display = "block";
   overlay.style.opacity = "1";
 
-  if (overlayTransitioning) {
-    return;
-  }
-
+  if (overlayTransitioning) return;
   overlayTransitioning = true;
 
   overlayContent.classList.remove("visible");
-
   overlayContent.classList.add("hidden");
 
   setTimeout(() => {
-    title.innerText = song.title || "Unknown";
-
-    artist.innerText = song.artist || "Unknown Artist";
-
-    requester.innerText = `Requested by @${song.requester || "anonymous"}`;
-
+    titleEl.innerText = song.title || "Unknown";
+    artistEl.innerText = song.artist || "Unknown Artist";
+    requesterEl.innerText = `Requested by @${song.requester || "anonymous"}`;
     thumbnail.src = song.thumbnail || "";
-
     avatar.src = song.avatar || "";
 
     updateOverlayBackground(song.thumbnail);
 
     overlayContent.classList.remove("hidden");
-
     overlayContent.classList.add("visible");
-
     overlayTransitioning = false;
   }, 220);
 
   resetProgress();
 
-  if (!audioUnlocked || !playerReady) {
-    return;
-  }
+  if (!audioUnlocked || !playerReady) return;
 
   try {
     player.loadVideoById(song.videoId);
-
     setTimeout(() => {
       player.unMute();
       player.setVolume(100);
@@ -248,38 +230,29 @@ socket.on("song-request", async (song) => {
   }
 });
 
+// ─── WARNA BACKGROUND DARI THUMBNAIL ───
 function updateOverlayBackground(imageUrl) {
+  if (!imageUrl) return;
   const img = new Image();
-
   img.crossOrigin = "anonymous";
-
   img.src = imageUrl;
-
   img.onload = () => {
     const canvas = document.createElement("canvas");
-
     const ctx = canvas.getContext("2d");
-
     canvas.width = 50;
     canvas.height = 50;
-
     ctx.drawImage(img, 0, 0, 50, 50);
-
     const pixels = ctx.getImageData(0, 0, 50, 50).data;
-
-    let r = 0;
-    let g = 0;
-    let b = 0;
-
-    let count = 0;
-
+    let r = 0,
+      g = 0,
+      b = 0,
+      count = 0;
     for (let i = 0; i < pixels.length; i += 4) {
       r += pixels[i];
       g += pixels[i + 1];
       b += pixels[i + 2];
       count++;
     }
-
     r = Math.floor(r / count);
     g = Math.floor(g / count);
     b = Math.floor(b / count);
@@ -288,175 +261,185 @@ function updateOverlayBackground(imageUrl) {
       linear-gradient(
         135deg,
         rgba(${r}, ${g}, ${b}, 0.88),
-        rgba(${Math.floor(r * 0.35)},
-              ${Math.floor(g * 0.35)},
-              ${Math.floor(b * 0.35)},
-              0.94)
+        rgba(${Math.floor(r * 0.3)}, ${Math.floor(g * 0.3)}, ${Math.floor(b * 0.3)}, 0.95)
       )
     `;
   };
 }
 
-// render antrean
-function renderQueue(queue) {
+// ─── RENDER QUEUE ───
+// Bug fix utama:
+// - queueKey hanya pakai song.queueId (bukan (song, index))
+//   karena dulu ada bug: key berubah saat posisi bergeser → semua item re-render
+// - Deteksi "masuk baru" (dari kanan) vs "naik ke atas" (dari server sort)
+// - Deteksi delete (key hilang) → animasi geser kanan + merah
+// - Posisi overlay player tidak bergerak sama sekali
+function renderQueue(queue, deletedKey = null) {
   const queueCount = document.getElementById("queueCount");
-
   const data = Array.isArray(queue) ? queue : [];
-
-  const visibleQueue = data.slice(0, MAX_VISIBLE_QUEUE);
+  const visible = data.slice(0, MAX_VISIBLE_QUEUE);
 
   if (queueCount) {
-    queueCount.textContent = `${data.length} Songs`;
+    const n = data.length;
+    queueCount.textContent = `${n} Song${n !== 1 ? "s" : ""}`;
   }
 
-  const nextKeys = new Set(
-    visibleQueue.map((song, index) => queueKey(song, index)),
-  );
+  const nextKeys = new Set(visible.map((s) => queueKey(s)));
 
-  // REMOVE
-  for (const [key, el] of queueEls.entries()) {
+  // REMOVE item yang tidak ada lagi
+  for (const [key, { el }] of queueEls.entries()) {
     if (!nextKeys.has(key)) {
-      el.classList.remove("show");
+      // Cek apakah ini karena delete (deletedKey) atau karena diputar (shift)
+      const leaveClass =
+        deletedKey && key === deletedKey ? "leave-delete" : "leave-up";
 
-      el.classList.add("leave");
+      el.classList.remove("show");
+      el.classList.add(leaveClass);
 
       setTimeout(() => {
-        if (el.parentElement) {
-          el.remove();
-        }
-
+        if (el.parentElement) el.remove();
         queueEls.delete(key);
-      }, 250);
+      }, 320);
     }
   }
 
-  // EMPTY
-  if (!visibleQueue.length) {
-    queueList.innerHTML = `
-      <div
-        style="
-          opacity:.5;
-          text-align:center;
-          padding:20px;
-          font-size:14px;
-        "
-      >
-        No Queue
-      </div>
-    `;
-
+  // EMPTY STATE
+  if (!visible.length) {
+    // Hapus existing items dulu, lalu tampilkan empty
+    setTimeout(() => {
+      if (queueEls.size === 0) {
+        queueList.innerHTML = `<div class="queueEmpty">Queue kosong — ketik !req untuk request lagu</div>`;
+      }
+    }, 350);
     return;
   }
 
-  // REMOVE NO QUEUE
-  if (queueList.innerText.includes("No Queue")) {
-    queueList.innerHTML = "";
-  }
+  // Hapus pesan "Queue kosong" jika ada
+  const emptyMsg = queueList.querySelector(".queueEmpty");
+  if (emptyMsg) emptyMsg.remove();
 
-  // ADD / UPDATE
-  visibleQueue.forEach((song, index) => {
-    const key = queueKey(song, index);
-
-    let el = queueEls.get(key);
-
-    // duration
+  // ADD / UPDATE items
+  visible.forEach((song, index) => {
+    const key = queueKey(song);
     const duration =
       song.durationText || song.duration || formatDuration(song.seconds);
 
-    const content = `
-      <div class="queueIndex"></div>
+    const isNew = !queueEls.has(key);
+    const isFirstPos = index === 0;
 
+    let el;
+
+    if (isNew) {
+      el = document.createElement("div");
+      el.className = "queueItem enter-new"; // masuk dari kanan
+      el.dataset.key = key;
+      queueEls.set(key, { el, song });
+      queueList.appendChild(el);
+    } else {
+      el = queueEls.get(key).el;
+    }
+
+    // Update konten
+    el.innerHTML = `
+      <div class="queueIndex"></div>
       <img
         class="queueThumb"
         src="${escapeHtml(song.thumbnail || "")}"
+        alt=""
+        onerror="this.style.background='rgba(255,255,255,0.05)'; this.src=''"
       />
-
       <div class="queueInfo">
-
-        <div class="queueSong">
-          ${escapeHtml(song.title || "Unknown")}
-        </div>
-
-        <div class="queueArtist">
-          ${escapeHtml(song.artist || "Unknown Artist")}
-        </div>
-
-        <div class="queueUser">
-          Requested by @${escapeHtml(song.requester || "anonymous")}
-        </div>
-
+        <div class="queueSong">${escapeHtml(song.title || "Unknown")}</div>
+        <div class="queueArtist">${escapeHtml(song.artist || "Unknown Artist")}</div>
+        <div class="queueUser">@${escapeHtml(song.requester || "anonymous")}</div>
       </div>
-
-      <div class="queueDuration">
-        ${escapeHtml(duration)}
-      </div>
+      <div class="queueDuration">${escapeHtml(duration)}</div>
     `;
 
-    if (!el) {
-      el = document.createElement("div");
+    el.classList.remove("leave-up", "leave-delete", "enter-new");
+    el.style.transitionDelay = `${index * 35}ms`;
 
-      el.className = "queueItem";
-
-      el.dataset.key = key;
-
-      el.innerHTML = content;
-
-      queueEls.set(key, el);
-
-      queueList.appendChild(el);
-
-      requestAnimationFrame(() => {
-        el.classList.add("show");
-      });
-    } else {
-      el.innerHTML = content;
-    }
-
-    el.classList.remove("leave");
-
-    el.style.transitionDelay = `${index * 40}ms`;
-
+    // Masukkan ke posisi yang benar di DOM
     const currentAtIndex = queueList.children[index];
-
     if (currentAtIndex !== el) {
       queueList.insertBefore(el, currentAtIndex || null);
     }
+
+    // Trigger animasi show setelah frame berikutnya
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.add("show");
+      });
+    });
   });
 
-  while (queueList.children.length > visibleQueue.length) {
+  // Hapus DOM node lebih dari yang dibutuhkan (safety)
+  while (queueList.children.length > visible.length) {
     const last = queueList.lastElementChild;
-
     if (!last) break;
-
     last.remove();
   }
-  // FIX NUMBERING
-  [...queueList.querySelectorAll(".queueItem")].forEach((item, i) => {
-    const number = item.querySelector(".queueIndex");
 
-    if (number) {
-      number.textContent = i + 1;
-    }
+  // Fix numbering
+  [...queueList.querySelectorAll(".queueItem")].forEach((item, i) => {
+    const num = item.querySelector(".queueIndex");
+    if (num) num.textContent = i + 1;
   });
+
+  // Simpan keys untuk referensi berikutnya
+  prevQueueKeys = visible.map((s) => queueKey(s));
 }
 
-// QUEUE UPDATE
+// ─── SOCKET EVENTS ───
+
+// Queue update — server mengirim queue terbaru
 socket.on("queue-update", (queue) => {
   renderQueue(queue);
 });
 
+// Lagu selesai / skip → idle
 socket.on("song-ended", () => {
   showIdleState();
+  thumbnail.classList.remove("spinning");
+  eqBars.style.display = "none";
 });
 
-// AUTO ENABLE
+// ─── (OPSIONAL) Event tambahan yang bisa kamu emit dari server ───
+// Kalau mau server emit "song-queued" / "song-deleted" / "song-skipped"
+// buat toast, uncomment dan tambahkan emit di server.js juga.
+
+socket.on("song-queued", (song) => {
+  showToast(
+    "🎵",
+    `<b>@${escapeHtml(song.requester)}</b> req: ${escapeHtml(song.title)}`,
+  );
+});
+
+socket.on("song-skipped", (song) => {
+  showToast(
+    "⏭️",
+    `Lagu di-skip${song?.title ? `: ${escapeHtml(song.title)}` : ""}`,
+  );
+});
+
+socket.on("song-deleted", (data) => {
+  // data = { index, song }
+  const msg = data?.song?.title
+    ? `Lagu dihapus: ${escapeHtml(data.song.title)}`
+    : `Lagu #${data?.index ?? "?"} dihapus dari queue`;
+  showToast("🗑️", msg);
+  // Render ulang dengan deletedKey agar animasi delete tampil
+  // queue terbaru akan datang via queue-update dari server
+});
+
+// ─── AUTO ENABLE (fallback jika overlay di OBS dan tidak ada interaksi) ───
 setTimeout(() => {
   if (!audioUnlocked && enableAudio) {
     enableAudio.click();
   }
 }, 3000);
 
-// SOCKET
+// ─── SOCKET STATUS ───
 socket.on("connect", () => {
   console.log("✅ SOCKET CONNECTED");
 });
@@ -465,4 +448,5 @@ socket.on("disconnect", () => {
   console.log("❌ SOCKET DISCONNECTED");
 });
 
+// ─── INIT ───
 showIdleState();

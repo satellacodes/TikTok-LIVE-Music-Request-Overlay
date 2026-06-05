@@ -2,10 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>TikTok Music Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
 
     <style>
       * {
@@ -16,25 +20,23 @@
 
       body {
         overflow: hidden;
-        font-family: Arial, sans-serif;
+        font-family: "DM Sans", Arial, sans-serif;
         background: transparent;
         color: white;
       }
 
+      /* ─── STACK UTAMA ─── */
       #overlayStack {
         position: fixed;
-
-        right: 30px;
-        bottom: 30px;
-
+        right: 28px;
+        top: 28px;
         display: flex;
+        flex-direction: column-reverse; /* queue di bawah, player di atas — TIDAK */
+        /* queue sebenarnya muncul di BAWAH player di DOM tapi flex-column biasa */
         flex-direction: column;
         align-items: flex-end;
-
-        gap: 14px;
-
+        gap: 12px;
         z-index: 9999;
-
         pointer-events: none;
       }
 
@@ -45,407 +47,548 @@
 
       #overlay {
         position: relative;
-
-        width: 500px;
-
+        width: 480px;
         overflow: hidden;
-
-        border-radius: 26px;
-
+        border-radius: 24px;
         opacity: 1;
-
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-
-        border: 1px solid rgba(255, 255, 255, 0.08);
-
+        backdrop-filter: blur(32px);
+        -webkit-backdrop-filter: blur(32px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         box-shadow:
-          0 10px 40px rgba(0, 0, 0, 0.45),
-          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          0 20px 60px rgba(0, 0, 0, 0.55),
+          inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        transition:
+          opacity 0.4s ease,
+          transform 0.4s ease;
+      }
 
-        transition: opacity 0.3s ease;
+      #overlay.slide-in {
+        animation: slideInPlayer 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+
+      @keyframes slideInPlayer {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
 
       #overlayBg {
         position: absolute;
         inset: 0;
-
         background: linear-gradient(
           135deg,
-          rgba(40, 40, 40, 0.92),
-          rgba(10, 10, 10, 0.94)
+          rgba(40, 40, 40, 0.93),
+          rgba(10, 10, 10, 0.95)
         );
-
         z-index: 0;
+        transition: background 1s ease;
+      }
 
-        transition:
-          background 0.8s ease,
-          opacity 0.4s ease;
+      #overlayBg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+        opacity: 0.5;
+        pointer-events: none;
       }
 
       #overlayContent {
         position: relative;
-
         z-index: 1;
-
         display: flex;
-
-        gap: 20px;
-
+        gap: 18px;
         padding: 20px;
-
         opacity: 1;
-
         transform: translateY(0);
-
         transition:
-          opacity 0.25s ease,
-          transform 0.25s ease;
+          opacity 0.22s ease,
+          transform 0.22s ease;
       }
+
       #overlayContent.hidden {
         opacity: 0;
-
-        transform: translateY(8px);
+        transform: translateY(6px);
       }
 
       #overlayContent.visible {
         opacity: 1;
-
         transform: translateY(0);
       }
 
       #thumbnail {
-        width: 120px;
-        height: 120px;
-
-        border-radius: 18px;
-
+        width: 110px;
+        height: 110px;
+        border-radius: 16px;
         object-fit: cover;
-
         flex: 0 0 auto;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+        transition:
+          transform 0.4s ease,
+          border-radius 0.4s ease;
+      }
 
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+      #thumbnail.spinning {
+        animation: spin 12s linear infinite;
+        border-radius: 50%;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
       }
 
       .info {
         flex: 1;
-
         min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       .nowPlaying {
-        font-size: 11px;
-
-        letter-spacing: 2px;
-
-        color: rgba(255, 255, 255, 0.5);
-
-        margin-bottom: 8px;
+        font-size: 10px;
+        letter-spacing: 3px;
+        color: rgba(255, 255, 255, 0.45);
+        margin-bottom: 6px;
+        font-weight: 600;
+        text-transform: uppercase;
       }
 
       .title {
-        font-size: 28px;
-
+        font-family: "Syne", sans-serif;
+        font-size: 12px;
         font-weight: 800;
-
         line-height: 1.15;
-
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
       .artist {
-        margin-top: 8px;
-
-        font-size: 16px;
-
-        color: rgba(255, 255, 255, 0.72);
-
+        margin-top: 5px;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.65);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
       .requester {
-        margin-top: 12px;
-
-        font-size: 13px;
-
+        margin-top: 8px;
+        font-size: 12px;
         color: #1db954;
+        font-weight: 600;
+      }
+
+      .bottomRow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
       }
 
       #avatar {
-        width: 42px;
-        height: 42px;
-
-        border-radius: 999px;
-
-        margin-top: 14px;
-
-        border: 2px solid rgba(255, 255, 255, 0.12);
-
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.15);
         object-fit: cover;
+        flex: 0 0 auto;
       }
 
       .progress-container {
-        width: 100%;
-
-        height: 7px;
-
-        margin-top: 16px;
-
+        flex: 1;
+        height: 6px;
         overflow: hidden;
-
         border-radius: 999px;
-
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.1);
       }
 
       #progress {
         width: 0%;
-
         height: 100%;
-
         border-radius: 999px;
-
         background: linear-gradient(
           90deg,
           rgba(255, 255, 255, 0.95),
-          rgba(255, 255, 255, 0.65)
+          rgba(255, 255, 255, 0.55)
         );
-
         transition: width 0.15s linear;
       }
 
+      #toast {
+        position: fixed;
+        bottom: 28px;
+        left: 28px;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .toast-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: rgba(15, 15, 15, 0.88);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(16px);
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.85);
+        animation: toastIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        max-width: 280px;
+      }
+
+      .toast-item.out {
+        animation: toastOut 0.3s ease forwards;
+      }
+
+      .toast-icon {
+        font-size: 18px;
+        flex: 0 0 auto;
+      }
+
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px) scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      @keyframes toastOut {
+        from {
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(-20px) scale(0.9);
+        }
+      }
+
       #queue {
-        width: 360px;
-
-        padding: 18px;
-
+        width: 340px;
         overflow: hidden;
-
-        border-radius: 24px;
-
+        border-radius: 22px;
         background: linear-gradient(
           180deg,
-          rgba(30, 30, 30, 0.95),
-          rgba(10, 10, 10, 0.92)
+          rgba(22, 22, 22, 0.96),
+          rgba(8, 8, 8, 0.94)
         );
-
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-
-        border: 1px solid rgba(255, 255, 255, 0.06);
-
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.07);
         box-shadow:
-          0 0 30px rgba(29, 185, 84, 0.12),
-          0 10px 40px rgba(0, 0, 0, 0.45);
+          0 0 0 1px rgba(29, 185, 84, 0.08),
+          0 16px 50px rgba(0, 0, 0, 0.5);
+        transform-origin: bottom right;
+        animation: queueAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+
+      @keyframes queueAppear {
+        from {
+          opacity: 0;
+          transform: scale(0.92) translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
       }
 
       .queueHeader {
         display: flex;
-
         align-items: center;
         justify-content: space-between;
-
-        margin-bottom: 16px;
+        padding: 16px 18px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       }
 
       .queueTitle {
-        font-size: 14px;
-
+        font-size: 11px;
         font-weight: 700;
-
-        letter-spacing: 2px;
-
-        color: rgba(255, 255, 255, 0.7);
+        letter-spacing: 2.5px;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
       }
 
       .queueCount {
         font-size: 12px;
-
-        color: rgba(255, 255, 255, 0.45);
+        color: rgba(255, 255, 255, 0.35);
+        font-weight: 500;
       }
 
       #queueList {
         display: flex;
         flex-direction: column;
-
-        gap: 10px;
+        padding: 10px 10px 10px;
+        gap: 4px;
+        max-height: 320px;
+        overflow: hidden;
       }
 
       .queueItem {
         display: flex;
-
         align-items: center;
-
-        gap: 12px;
-
-        padding: 12px;
-
-        border-radius: 16px;
-
-        background: rgba(255, 255, 255, 0.04);
-
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid transparent;
         opacity: 0;
-
-        transform: translateY(-10px);
-
+        transform: translateY(-14px) scale(0.97);
         transition:
-          opacity 0.25s ease,
-          transform 0.25s ease,
-          background 0.25s ease;
+          opacity 0.3s ease,
+          transform 0.3s ease,
+          background 0.2s ease,
+          border-color 0.2s ease;
+        cursor: default;
+        will-change: transform, opacity;
       }
 
       .queueItem.show {
         opacity: 1;
-
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
       }
 
-      .queueItem.leave {
+      .queueItem.leave-up {
         opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease;
+      }
 
-        transform: translateY(10px) scale(0.98);
+      .queueItem.leave-delete {
+        opacity: 0;
+        transform: translateX(60px) scale(0.9);
+        transition:
+          opacity 0.3s ease,
+          transform 0.3s ease;
+        background: rgba(220, 60, 60, 0.1) !important;
+        border-color: rgba(220, 60, 60, 0.25) !important;
+      }
+
+      .queueItem.enter-new {
+        opacity: 0;
+        transform: translateX(30px) scale(0.96);
       }
 
       .queueItem:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(255, 255, 255, 0.06);
       }
 
       .queueIndex {
-        width: 24px;
-
+        width: 20px;
         flex: 0 0 auto;
-
-        font-size: 13px;
-        font-weight: bold;
-
-        color: rgba(255, 255, 255, 0.45);
+        font-size: 12px;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.3);
+        text-align: center;
       }
 
       .queueThumb {
-        width: 52px;
-        height: 52px;
-
-        border-radius: 12px;
-
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
         object-fit: cover;
-
-        background: #222;
-
+        background: rgba(255, 255, 255, 0.05);
         flex: 0 0 auto;
       }
 
       .queueInfo {
         flex: 1;
-
         min-width: 0;
       }
 
       .queueSong {
-        font-size: 15px;
-
-        font-weight: 700;
-
+        font-size: 14px;
+        font-weight: 600;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
       .queueArtist {
-        margin-top: 4px;
-
-        font-size: 13px;
-
-        color: rgba(255, 255, 255, 0.55);
-
+        margin-top: 2px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.45);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
       .queueUser {
-        margin-top: 6px;
-
-        font-size: 12px;
-
+        margin-top: 4px;
+        font-size: 11px;
         color: #1db954;
+        font-weight: 600;
       }
 
       .queueDuration {
         flex: 0 0 auto;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.35);
+        font-weight: 500;
+      }
 
-        font-size: 12px;
-
-        color: rgba(255, 255, 255, 0.4);
+      .queueItem.playing {
+        border-color: rgba(29, 185, 84, 0.2);
+        background: rgba(29, 185, 84, 0.06);
       }
 
       #unlock {
         position: fixed;
-
         inset: 0;
-
         display: flex;
-
         align-items: center;
         justify-content: center;
-
-        background: black;
-
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
         z-index: 999999;
       }
 
       #unlock button {
-        padding: 18px 30px;
-
-        font-size: 22px;
-
+        padding: 16px 32px;
+        font-size: 18px;
+        font-family: "Syne", sans-serif;
+        font-weight: 700;
         border: none;
-
-        border-radius: 15px;
-
+        border-radius: 16px;
+        background: #1db954;
+        color: white;
         cursor: pointer;
+        letter-spacing: 1px;
+        box-shadow: 0 8px 30px rgba(29, 185, 84, 0.4);
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+
+      #unlock button:hover {
+        transform: scale(1.04);
+        box-shadow: 0 12px 40px rgba(29, 185, 84, 0.5);
       }
 
       #ytplayer {
         width: 1px;
         height: 1px;
-
         position: fixed;
-
         left: -9999px;
+      }
+
+      .queueEmpty {
+        text-align: center;
+        padding: 20px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.3);
+        animation: fadeIn 0.3s ease both;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .eq-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 14px;
+        margin-left: 4px;
+      }
+
+      .eq-bar {
+        width: 3px;
+        background: #1db954;
+        border-radius: 2px;
+        animation: eqPulse 0.8s ease-in-out infinite;
+      }
+
+      .eq-bar:nth-child(1) {
+        animation-delay: 0s;
+        animation-duration: 0.6s;
+      }
+      .eq-bar:nth-child(2) {
+        animation-delay: 0.15s;
+        animation-duration: 0.9s;
+      }
+      .eq-bar:nth-child(3) {
+        animation-delay: 0.3s;
+        animation-duration: 0.7s;
+      }
+
+      @keyframes eqPulse {
+        0%,
+        100% {
+          height: 4px;
+        }
+        50% {
+          height: 14px;
+        }
+      }
+
+      .nowPlayingRow {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 6px;
       }
     </style>
   </head>
 
   <body>
     <div id="unlock">
-      <button id="enableAudio">Enable Audio</button>
+      <button id="enableAudio">▶ Enable Audio</button>
     </div>
 
+    <div id="toast"></div>
+
     <div id="overlayStack">
-      <div id="overlay">
+      <div id="overlay" class="slide-in">
         <div id="overlayBg"></div>
-
         <div id="overlayContent" class="visible">
-          <img id="thumbnail" src="assets/music-idle.png" />
-
+          <img id="thumbnail" src="assets/music-idle.png" alt="thumbnail" />
           <div class="info">
-            <div class="nowPlaying">NOW PLAYING</div>
-
-            <div id="title" class="title">Waiting...</div>
-
-            <div id="artist" class="artist"></div>
-
-            <div id="requester" class="requester"></div>
-
-            <div class="progress-container">
-              <div id="progress"></div>
+            <div class="nowPlayingRow">
+              <div class="nowPlaying">NOW PLAYING</div>
+              <div class="eq-bars" id="eqBars" style="display: none">
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+              </div>
             </div>
-
-            <img id="avatar" src="assets/avatar-idle.png" />
+            <div id="title" class="title">Waiting...</div>
+            <div id="artist" class="artist"></div>
+            <div id="requester" class="requester"></div>
+            <div class="bottomRow">
+              <img id="avatar" src="assets/avatar-idle.png" alt="avatar" />
+              <div class="progress-container">
+                <div id="progress"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -453,10 +596,8 @@
       <div id="queue">
         <div class="queueHeader">
           <div class="queueTitle">UP NEXT</div>
-
           <div id="queueCount" class="queueCount">0 Songs</div>
         </div>
-
         <div id="queueList"></div>
       </div>
     </div>
@@ -464,7 +605,6 @@
     <div id="ytplayer"></div>
 
     <script src="/socket.io/socket.io.js"></script>
-
     <script src="app.js"></script>
   </body>
 </html>
