@@ -8,25 +8,36 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-// ─── CONFIG ───
+// CONFIG
 // Ganti username dan admins sebelum run
 const PORT = 3000;
 const TIKTOK_USERNAME = "change this";
 const ADMINS = ["change this"].map((x) => x.toLowerCase());
 const MAX_QUEUE = 50;
-const REQUEST_COOLDOWN = 5000; // ms
+const REQUEST_COOLDOWN = 2500; // ms
+
+const BLOCKED_WORDS = [
+  "jomok",
+  "bokep",
+  "ngentot",
+  "dj",
+  "DJ",
+  "kicau",
+  "mania",
+  "mbg",
+  "MBG",
+  "dangdut",
+];
 
 app.use(express.static("public"));
 
-// ─── STATE ───
 const queue = [];
 let currentSong = null;
 const cooldownMap = new Map();
 
-// ─── TIKTOK ───
 const tiktok = new WebcastPushConnection(TIKTOK_USERNAME);
 
-// ─── HELPER: SEARCH LAGU ───
+// Helper SEARCH LAGU
 async function searchSong(query) {
   try {
     const result = await ytSearch(query);
@@ -46,9 +57,8 @@ async function searchSong(query) {
   }
 }
 
-// ─── PLAY NEXT ───
+// PLAY NEXT
 function playNextSong() {
-  // bug fix: jangan play kalau currentSong masih ada
   if (currentSong || queue.length === 0) return;
   currentSong = queue.shift();
   console.log("▶️ NOW PLAYING:", currentSong.title);
@@ -56,12 +66,12 @@ function playNextSong() {
   io.emit("queue-update", queue);
 }
 
-// ─── IDLE STATE ───
+// IDLE STATE
 function emitIdleState() {
   io.emit("song-ended");
 }
 
-// ─── ROUTE: NEXT ───
+// ROUTE
 app.get("/next", (req, res) => {
   currentSong = null;
   if (queue.length === 0) {
@@ -71,7 +81,7 @@ app.get("/next", (req, res) => {
   res.send("NEXT");
 });
 
-// ─── ROUTE: TEST (lagu pertama) ───
+// test or for testing after app running
 app.get("/test", async (req, res) => {
   const song = await searchSong("lalu biru");
   if (!song) return res.send("NO SONG");
@@ -89,7 +99,6 @@ app.get("/test", async (req, res) => {
   res.send("TEST OK");
 });
 
-// ─── ROUTE: TEST2 (lagu kedua) ───
 app.get("/test2", async (req, res) => {
   const song = await searchSong("the art of chasing you");
   if (!song) return res.send("NO SONG");
@@ -106,7 +115,20 @@ app.get("/test2", async (req, res) => {
   res.send("TEST OK");
 });
 
-// ─── SOCKET ───
+app.get("/test-blocked", async (req, res) => {
+  const query = "jomok mania";
+
+  const queryLower = query.toLowerCase();
+  const isBlocked = BLOCKED_WORDS.some((word) => queryLower.includes(word));
+  if (isBlocked) {
+    console.log(`🚫 BLOCKED: "${query}"`);
+    return res.send("BLOCKED — lagu tidak diproses");
+  }
+
+  res.send("LOLOS — lagu diproses");
+});
+
+// SOCKET
 io.on("connection", (socket) => {
   console.log("Overlay connected");
   // Kirim state awal ke client yang baru connect
@@ -118,7 +140,7 @@ io.on("connection", (socket) => {
   }
 });
 
-// ─── TIKTOK CHAT HANDLER ───
+// TIKTOK CHAT HANDLER
 async function start() {
   try {
     await tiktok.connect();
@@ -130,12 +152,11 @@ async function start() {
         const username = data.uniqueId?.toLowerCase();
         if (!message || !username) return;
 
-        // SKIP — hanya admin
+        // SKIP hanya admin
         if (message === "!skip" && ADMINS.includes(username)) {
           const skipped = currentSong;
           currentSong = null;
 
-          // bug fix: emit skip event dengan info lagu yang di-skip
           io.emit("song-skipped", skipped || null);
 
           if (queue.length === 0) emitIdleState();
@@ -171,7 +192,6 @@ async function start() {
           const removed = queue.splice(queueIndex, 1)[0];
           console.log(`🗑️ REMOVED: ${removed.title}`);
           io.emit("queue-update", queue);
-          // Emit event delete supaya overlay bisa animasi yang tepat
           io.emit("song-deleted", { index, song: removed });
           return;
         }
@@ -206,20 +226,29 @@ async function start() {
         // QUERY
         const query = message.replace(/!req\s*/i, "").trim();
         if (!query) return;
-        console.log(`🔍 SEARCH: "${query}" oleh @${username}`);
 
+        // CEK KATA BLOKIR
+        const queryLower = query.toLowerCase();
+        const isBlocked = BLOCKED_WORDS.some((word) =>
+          queryLower.includes(word),
+        );
+        if (isBlocked) {
+          console.log(`🚫 BLOCKED: "${query}" oleh @${username}`);
+          return;
+        }
+
+        console.log(`🔍 SEARCH: "${query}" oleh @${username}`);
         const song = await searchSong(query);
         if (!song) {
           console.log("❌ NO RESULT");
           return;
         }
-
         const songData = {
           ...song,
           queueId:
             Date.now().toString(36) + Math.random().toString(36).slice(2),
           requester: username,
-          // bug fix: fallback ke github jika profilePictureUrl kosong
+          // fallback ke github jika profilePictureUrl kosong
           avatar: data.profilePictureUrl || "https://github.com/github.png",
         };
 
