@@ -28,6 +28,8 @@ let player;
 let playerReady = false;
 let audioUnlocked = false;
 
+let currentDisplayedSong = null;
+
 // ─── TOAST NOTIFIKASI ───
 function showToast(icon, text, duration = 2800) {
   const item = document.createElement("div");
@@ -41,10 +43,36 @@ function showToast(icon, text, duration = 2800) {
   }, duration);
 }
 
-// ─── YOUTUBE API ───
+//youtube api load
 const tag = document.createElement("script");
 tag.src = "https://www.youtube.com/iframe_api";
+
+tag.onerror = () => {
+  console.warn("⚠️ YouTube IFrame API gagal dimuat");
+  if (enableAudio) {
+    enableAudio.textContent = "Lanjut (tanpa audio)";
+    enableAudio.disabled = false;
+  }
+};
 document.body.appendChild(tag);
+
+// mana buktinya, ini buktinya
+function waitForPlayer(timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    if (playerReady) return resolve();
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (playerReady) {
+        clearInterval(interval);
+        return resolve();
+      }
+      if (Date.now() - start >= timeout) {
+        clearInterval(interval);
+        reject(new Error("Player timeout setelah " + timeout + "ms"));
+      }
+    }, 100);
+  });
+}
 
 // ─── PROGRESS ───
 function resetProgress() {
@@ -148,20 +176,42 @@ window.onYouTubeIframeAPIReady = () => {
 
 // ─── ENABLE AUDIO ───
 enableAudio.addEventListener("click", async () => {
-  if (!playerReady) return;
+  // Hindari double click saat sedang loading
+  if (enableAudio.disabled) return;
+  enableAudio.disabled = true;
+  enableAudio.textContent = "Memuat player...";
+
   try {
-    // bug fix: loadVideoById lalu langsung play setelah short delay
+    // Tunggu YouTube player siap, maksimal 8 detik
+    await waitForPlayer(8000);
+
+    // Load video pendek untuk unlock autoplay browser
     player.loadVideoById("zh7xbTd2-wA");
-    setTimeout(() => {
-      player.unMute();
-      player.setVolume(100);
-      player.playVideo();
-      audioUnlocked = true;
-      unlock.remove();
-      console.log("✅ AUDIO ENABLED");
-    }, 800);
+    await new Promise((r) => setTimeout(r, 800));
+
+    player.unMute();
+    player.setVolume(100);
+    player.playVideo();
+    audioUnlocked = true;
+
+    if (currentDisplayedSong) {
+      setTimeout(() => {
+        player.loadVideoById(currentDisplayedSong.videoId);
+        setTimeout(() => {
+          player.unMute();
+          player.setVolume(100);
+          player.playVideo();
+        }, 500);
+      }, 900);
+    }
+
+    console.log("✅ AUDIO ENABLED");
   } catch (err) {
-    console.log(err);
+    console.warn("⚠️ Player tidak ready:", err.message);
+  }
+
+  if (unlock && unlock.parentElement) {
+    unlock.remove();
   }
 });
 
