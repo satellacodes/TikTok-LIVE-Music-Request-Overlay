@@ -8,6 +8,11 @@
   Real-time TikTok LIVE music request overlay using YouTube audio playback.
 </p>
 
+I am Indonesian, I hope you can use translate if you can't understand my language.
+
+> [!NOTE]
+> Before starting, I would like to thank the creators of tiktok-live-connector and eulerstream.
+
 ---
 
 ## ✨ Features
@@ -41,6 +46,10 @@
 ## 🚀 Installation
 
 Ada dua cara menjalankan project ini — **manual dengan Node.js** atau **lewat Docker**.
+
+---
+
+## BUAT APIKEY DULU DI eulerstream.com
 
 ---
 
