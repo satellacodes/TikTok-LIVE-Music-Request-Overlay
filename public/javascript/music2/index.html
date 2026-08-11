@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TikTok Music Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <script type="importmap">
+      {
+        "imports": {
+          "motion": "https://esm.sh/motion"
+        }
+      }
+    </script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+        font-family: "DM Sans", Arial, sans-serif;
+        background: transparent;
+        color: white;
+      }
+
+      #overlayStack {
+        position: fixed;
+        right: 28px;
+        top: 28px;
+        z-index: 9999;
+        pointer-events: none;
+      }
+
+      .widget-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        perspective: 1200px;
+        transform-style: preserve-3d;
+        opacity: 0;
+      }
+
+      .avatar-container {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        flex-shrink: 0;
+      }
+
+      #avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      .requester-badge {
+        position: absolute;
+        top: -8px;
+        right: -30px;
+        background: #1db954;
+        color: white;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 4px 10px;
+        border-radius: 12px;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        z-index: 10;
+      }
+
+      #overlay {
+        pointer-events: auto;
+        position: relative;
+        width: 380px;
+        overflow: hidden;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.55),
+          inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      }
+
+      #overlayBg {
+        position: absolute;
+        inset: -20px;
+        background-size: cover;
+        background-position: center;
+        filter: blur(1px);
+        z-index: 0;
+        transition: background-image 0.5s ease;
+      }
+
+      .overlay-gradient {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to left,
+          rgba(0, 0, 0, 0.1) 0%,
+          rgba(0, 0, 0, 0.95) 100%
+        );
+        z-index: 1;
+      }
+
+      #overlayContent {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        gap: 18px;
+        padding: 24px;
+      }
+
+      .info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .nowPlayingRow {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+
+      .nowPlaying {
+        font-size: 10px;
+        letter-spacing: 3px;
+        color: rgba(255, 255, 255, 0.6);
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .title {
+        font-family: "Syne", sans-serif;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 1.15;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .artist {
+        margin-top: 5px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.7);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .bottomRow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .time-text {
+        font-size: 11px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.7);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .progress-container {
+        flex: 1;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.2);
+        position: relative;
+      }
+
+      #progress {
+        width: 0%;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #1db954, #1ed760);
+        position: relative;
+        transition: width 0.25s linear;
+      }
+
+      #progress::after {
+        content: "";
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+      }
+
+      .eq-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 12px;
+      }
+      .eq-bar {
+        width: 3px;
+        background: #1db954;
+        border-radius: 2px;
+        animation: eqPulse 0.8s ease-in-out infinite;
+      }
+      .eq-bar:nth-child(1) {
+        animation-delay: 0s;
+        animation-duration: 0.6s;
+      }
+      .eq-bar:nth-child(2) {
+        animation-delay: 0.15s;
+        animation-duration: 0.9s;
+      }
+      .eq-bar:nth-child(3) {
+        animation-delay: 0.3s;
+        animation-duration: 0.7s;
+      }
+
+      @keyframes eqPulse {
+        0%,
+        100% {
+          height: 4px;
+        }
+        50% {
+          height: 12px;
+        }
+      }
+
+      #ytplayer {
+        width: 1px;
+        height: 1px;
+        position: fixed;
+        left: -9999px;
+      }
+
+      #toast {
+        position: fixed;
+        top: 28px;
+        left: 28px;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .toast-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: rgba(15, 15, 15, 0.88);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(16px);
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.85);
+        animation: toastIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        max-width: 280px;
+      }
+
+      .toast-item.out {
+        animation: toastOut 0.3s ease forwards;
+      }
+
+      .toast-icon {
+        font-size: 18px;
+        flex: 0 0 auto;
+      }
+
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px) scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      @keyframes toastOut {
+        from {
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(-20px) scale(0.9);
+        }
+      }
+
+      #unlock {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        z-index: 999999;
+      }
+
+      #unlock button {
+        padding: 16px 32px;
+        font-size: 18px;
+        font-family: "Syne", sans-serif;
+        font-weight: 700;
+        border: none;
+        border-radius: 16px;
+        background: #1db954;
+        color: white;
+        cursor: pointer;
+        letter-spacing: 1px;
+        box-shadow: 0 8px 30px rgba(29, 185, 84, 0.4);
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+
+      #unlock button:hover {
+        transform: scale(1.04);
+        box-shadow: 0 12px 40px rgba(29, 185, 84, 0.5);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="unlock">
+      <button id="enableAudio">▶️ Enable Audio</button>
+    </div>
+
+    <div id="toast"></div>
+
+    <div id="overlayStack">
+      <div id="widgetContainer" class="widget-container">
+        <div class="avatar-container">
+          <img id="avatar" src="assets/avatar-idle.png" alt="avatar" />
+          <div id="requesterBadge" class="requester-badge">Requester by -</div>
+        </div>
+
+        <div id="overlay">
+          <div id="overlayBg"></div>
+          <div class="overlay-gradient"></div>
+
+          <div id="overlayContent">
+            <div class="info">
+              <div class="nowPlayingRow">
+                <div class="nowPlaying">NOW PLAYING</div>
+                <div class="eq-bars" id="eqBars" style="display: none">
+                  <div class="eq-bar"></div>
+                  <div class="eq-bar"></div>
+                  <div class="eq-bar"></div>
+                </div>
+              </div>
+              <div id="title" class="title">Waiting...</div>
+              <div id="artist" class="artist"></div>
+
+              <div class="bottomRow">
+                <span id="currentTime" class="time-text">0:00</span>
+                <div class="progress-container">
+                  <div id="progress"></div>
+                </div>
+                <span id="durationTime" class="time-text">0:00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ytplayer"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="../shared.js"></script>
+    <script type="module" src="./appOverlay.js"></script>
+  </body>
+</html>

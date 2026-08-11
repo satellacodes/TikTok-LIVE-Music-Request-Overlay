@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Stream Timer</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Prompt:wght@900&display=swap");
+
+      body {
+        background-color: transparent;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        font-family: "Prompt", sans-serif;
+      }
+
+      .timer-container {
+        filter: drop-shadow(0px 8px 12px rgba(0, 0, 0, 0.7));
+
+        animation: breathe 4s ease-in-out infinite;
+      }
+
+      .timer-text {
+        font-size: 5rem;
+        font-weight: 900;
+        margin: 0;
+        line-height: 1;
+
+        background: linear-gradient(180deg, #ffffff 0%, #8a8a8a 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: transparent;
+
+        letter-spacing: 2px;
+      }
+
+      @keyframes breathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.03);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="timer-container">
+      <div id="timer" class="timer-text">00.00.00</div>
+    </div>
+
+    <script>
+      const timerEl = document.getElementById("timer");
+      const startTime = Date.now();
+
+      setInterval(() => {
+        const totalSeconds = Math.floor((Date.now() - startTime) / 1000);
+
+        const h = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+        const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
+          2,
+          "0",
+        );
+        const s = String(totalSeconds % 60).padStart(2, "0");
+
+        timerEl.textContent = `${h}.${m}.${s}`;
+      }, 1000);
+    </script>
+  </body>
+</html>
